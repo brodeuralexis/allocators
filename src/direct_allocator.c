@@ -13,22 +13,8 @@ typedef struct {
     size_t size;
 } node_t;
 
-inline static void* align_up(void* pointer, size_t alignment)
-{
-    UNUSED(alignment);
-    return pointer;
-}
-
-inline static void* align_down(void* pointer, size_t alignment)
-{
-    UNUSED(alignment);
-    return pointer;
-}
-
 static void* direct_allocator_allocate(size_t size)
 {
-    UNUSED(size);
-
     node_t* node = mmap(NULL, sizeof(node_t) + size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
     if (node == NULL)
@@ -46,8 +32,6 @@ static void direct_allocator_deallocate(void* memory)
 {
     node_t* node = ((node_t*) memory) - 1;
 
-    puts("before magic");
-
     if (node->magic != NODE_MAGIC)
     {
         return;
@@ -55,9 +39,7 @@ static void direct_allocator_deallocate(void* memory)
 
     memory = (void*) (node + 1);
 
-    puts("Deallocating");
-
-    munmap(memory, node->size);
+    munmap((void*) node, node->size);
 }
 
 static void* direct_allocator_reallocate(void* memory, size_t size)
@@ -100,7 +82,6 @@ static void* direct_allocator_reallocate_callback(allocator_t* allocator, void* 
     }
     else if (size == 0)
     {
-        puts("before deallocator");
         direct_allocator_deallocate(memory);
         return NULL;
     }
