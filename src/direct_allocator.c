@@ -2,6 +2,7 @@
 
 #include <string.h>
 #include <sys/mman.h>
+#include <stdio.h>
 
 #include "./macros.h"
 
@@ -11,6 +12,18 @@ typedef struct {
     size_t magic;
     size_t size;
 } node_t;
+
+inline static void* align_up(void* pointer, size_t alignment)
+{
+    UNUSED(alignment);
+    return pointer;
+}
+
+inline static void* align_down(void* pointer, size_t alignment)
+{
+    UNUSED(alignment);
+    return pointer;
+}
 
 static void* direct_allocator_allocate(size_t size)
 {
@@ -31,7 +44,9 @@ static void* direct_allocator_allocate(size_t size)
 
 static void direct_allocator_deallocate(void* memory)
 {
-    node_t* node = (node_t*) memory;
+    node_t* node = ((node_t*) memory) - 1;
+
+    puts("before magic");
 
     if (node->magic != NODE_MAGIC)
     {
@@ -39,6 +54,8 @@ static void direct_allocator_deallocate(void* memory)
     }
 
     memory = (void*) (node + 1);
+
+    puts("Deallocating");
 
     munmap(memory, node->size);
 }
@@ -83,6 +100,7 @@ static void* direct_allocator_reallocate_callback(allocator_t* allocator, void* 
     }
     else if (size == 0)
     {
+        puts("before deallocator");
         direct_allocator_deallocate(memory);
         return NULL;
     }
