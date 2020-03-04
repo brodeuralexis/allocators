@@ -39,7 +39,7 @@ static void direct_allocator_deallocate(void* memory)
 
     memory = (void*) (node + 1);
 
-    munmap((void*) node, node->size);
+    munmap((void*) node, node->size + sizeof(node_t));
 }
 
 static void* direct_allocator_reallocate(void* memory, size_t size)
