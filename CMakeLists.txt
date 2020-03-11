@@ -10,6 +10,7 @@ add_library(allocators
     include/allocators/arena_allocator.h src/arena_allocator.c
     include/allocators/synchronized_allocator.h src/synchronized_allocator.c
     include/allocators/direct_allocator.h src/direct_allocator.c
+    include/allocators/fixed_buffer_allocator.h src/fixed_buffer_allocator.c
 
     src/macros.h
     src/sem.h src/sem.c
