@@ -1,24 +1,21 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "allocators/fixed_buffer_allocator.h"
+#include "libmem.h"
 
 char buffer[1000];
 
-#define ARRAY_SIZE 10
-#define SUBARRAY_SIZE 10
-
 int main()
 {
-    fixed_buffer_allocator_t fba = fixed_buffer_allocator_init(FBS_FIRST_FIT, &buffer, sizeof(buffer));
-    allocator_t* allocator = &fba.allocator;
+    initmem(ms_first_fit, &buffer, sizeof(buffer));
 
-    char* a1 = create_array(allocator, char, 100);
-    char* a2 = create_array(allocator, char, 200);
-    char* a3 = create_array(allocator, char, 300);
-    destroy_array(allocator, a2);
+    char* a1 = alloumem(100);
+    char* a2 = alloumem(200);
+    char* a3 = alloumem(300);
+    liberemem(a2);
 
-    fixed_buffer_allocator_debug(&fba, stderr);
+    affiche_etat_memoire();
+    affiche_parametre_memoire(250);
 
 //    fixed_buffer_allocator_debug(&fba, stderr);
 //    fprintf(stderr, "a1 = %zu\n", fixed_buffer_allocator_debug_memory(&fba, a1));

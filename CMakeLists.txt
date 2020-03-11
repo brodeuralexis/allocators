@@ -5,6 +5,8 @@ project(allocators
 )
 
 add_library(allocators
+    include/libmem.h src/libmem.c
+
     include/allocators/allocator.h src/allocator.c
     include/allocators/c_allocator.h src/c_allocator.c
     include/allocators/arena_allocator.h src/arena_allocator.c
