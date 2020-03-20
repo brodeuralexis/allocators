@@ -12,8 +12,7 @@ add_library(allocators
     include/allocators/fixed_buffer_allocator.h src/fixed_buffer_allocator.c
 
     src/macros.h
-    src/sem.h src/sem.c
-)
+        )
 
 target_compile_features(allocators
     PUBLIC
