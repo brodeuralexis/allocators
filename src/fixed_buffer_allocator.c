@@ -79,7 +79,7 @@ static void* fixed_buffer_node_reserve(fixed_buffer_allocator_t* allocator, fixe
         split->size = remaining_size;
         split->previous = node;
 
-        fixed_buffer_node_t* next = fixed_buffer_node_next(allocator, node);
+        fixed_buffer_node_t* next = fixed_buffer_node_next(allocator, split);
         if (next != NULL)
         {
             next->previous = split;
@@ -109,6 +109,10 @@ static void fixed_buffer_node_release(fixed_buffer_allocator_t* allocator, fixed
     {
         previous->size += node->size + sizeof(fixed_buffer_node_t);
         node = previous;
+
+        if (next != NULL) {
+            next->previous = node;
+        }
     }
 
     // The next node is a hole, make it a part of `node`.
@@ -141,6 +145,7 @@ static void* first_fit_reallocate(allocator_t* _allocator, void* memory, size_t 
     {
         return NULL;
     }
+    // No memory, but a size given, do memory allocation.
     else if (memory == NULL)
     {
         fixed_buffer_node_t* node = fixed_buffer_node_first(allocator);
@@ -166,6 +171,7 @@ static void* first_fit_reallocate(allocator_t* _allocator, void* memory, size_t 
         // We found a node, so we allocate a size out of it.
         return fixed_buffer_node_reserve(allocator, node, size);
     }
+    // Memory is not null, do a free.
     else if (size == 0)
     {
         fixed_buffer_node_t* node = fixed_buffer_node_find(allocator, memory);
@@ -179,6 +185,7 @@ static void* first_fit_reallocate(allocator_t* _allocator, void* memory, size_t 
 
         return NULL;
     }
+    // We have a pointer to memory, and a size, do a resize.
     else
     {
         fixed_buffer_node_t* node = fixed_buffer_node_find(allocator, memory);
@@ -190,11 +197,19 @@ static void* first_fit_reallocate(allocator_t* _allocator, void* memory, size_t 
 
         if (size <= node->size)
         {
-            return node;
+            return memory;
         }
 
         void* new_memory = first_fit_reallocate(_allocator, NULL, size);
+
+        if (new_memory == NULL)
+        {
+            return NULL;
+        }
+
         memcpy(new_memory, memory, node->size);
+        fixed_buffer_node_release(allocator, node);
+
         return new_memory;
     }
 }
@@ -204,6 +219,90 @@ static fixed_buffer_strategy_t first_fit_strategy_state = {
 };
 
 fixed_buffer_strategy_t* FBS_FIRST_FIT = &first_fit_strategy_state;
+
+static void* best_fit_reallocate(allocator_t* _allocator, void* memory, size_t size)
+{
+    fixed_buffer_allocator_t* allocator = FIELD_PARENT_PTR(fixed_buffer_allocator_t, allocator, _allocator);
+
+    if (memory == NULL && size == 0)
+    {
+        return NULL;
+    }
+    // No memory, but a size given, do memory allocation.
+    else if (memory == NULL)
+    {
+        fixed_buffer_node_t* best_fit = NULL;
+        fixed_buffer_node_t* node = fixed_buffer_node_first(allocator);
+
+        while (node)
+        {
+            // We have a hole with enough bytes available.
+            if (node->is_hole && node->size >= size && (best_fit == NULL || node->size < best_fit->size))
+            {
+                best_fit = node;
+            }
+
+            node = fixed_buffer_node_next(allocator, node);
+        }
+
+        // `node_next` returns NULL when traversal of the list finishes.
+        // This check indicates that we have not found a suitable block of memory to allocate.
+        if (best_fit == NULL)
+        {
+            return NULL;
+        }
+
+        // We found a node, so we allocate a size out of it.
+        return fixed_buffer_node_reserve(allocator, best_fit, size);
+    }
+    // Memory is not null, do a free.
+    else if (size == 0)
+    {
+        fixed_buffer_node_t* node = fixed_buffer_node_find(allocator, memory);
+
+        if (node == NULL)
+        {
+            return NULL;
+        }
+
+        fixed_buffer_node_release(allocator, node);
+
+        return NULL;
+    }
+    // We have a pointer to memory, and a size, do a resize.
+    else
+    {
+        fixed_buffer_node_t* node = fixed_buffer_node_find(allocator, memory);
+
+        if (node == NULL)
+        {
+            return NULL;
+        }
+
+        if (size <= node->size)
+        {
+            return memory;
+        }
+
+        void* new_memory = best_fit_reallocate(_allocator, NULL, size);
+
+        if (new_memory == NULL)
+        {
+            return NULL;
+        }
+
+        memcpy(new_memory, memory, node->size);
+        fixed_buffer_node_release(allocator, node);
+
+        return new_memory;
+    }
+}
+
+static fixed_buffer_strategy_t best_fit_strategy_state = {
+    .allocator = { best_fit_reallocate },
+};
+
+fixed_buffer_strategy_t* FBS_BEST_FIT = &best_fit_strategy_state;
 
 fixed_buffer_allocator_t fixed_buffer_allocator_init(fixed_buffer_strategy_t* strategy, void* buffer, size_t size)
 {

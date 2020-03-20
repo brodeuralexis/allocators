@@ -12,8 +12,8 @@ void initmem(enum mem_strategy strategy, void* buffer, size_t size)
             fba = fixed_buffer_allocator_init(FBS_FIRST_FIT, buffer, size);
             break;
         case ms_best_fit:
-            fputs("unsupported strategy: ms_best_fit\n", stderr);
-            exit(EXIT_FAILURE);
+            fba = fixed_buffer_allocator_init(FBS_BEST_FIT, buffer, size);
+            break;
         case ms_worst_fit:
             fputs("unsupported strategy: ms_worst_fit\n", stderr);
             exit(EXIT_FAILURE);

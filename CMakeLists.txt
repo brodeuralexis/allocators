@@ -12,7 +12,7 @@ add_library(allocators
     include/allocators/fixed_buffer_allocator.h src/fixed_buffer_allocator.c
 
     src/macros.h
-        )
+)
 
 target_compile_features(allocators
     PUBLIC
@@ -28,7 +28,7 @@ target_include_directories(allocators
 
 target_compile_options(allocators
     PRIVATE
-        -Wall -Wextra -Wpedantic -Werror
+        $<IF:$<C_COMPILER_ID:MSVC>,/W3 /WX,-Wall -Wextra -Wpedantic -Werror>
 )
 
 add_executable(test
