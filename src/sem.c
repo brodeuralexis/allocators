@@ -3,6 +3,7 @@
 #ifndef __APPLE__
 #include <errno.h>
 #include <stdbool.h>
+#include <assert.h>
 #endif
 
 int allocator_sem_init(allocator_sem_t* semaphore, uint value)

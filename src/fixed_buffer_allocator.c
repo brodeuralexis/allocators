@@ -5,6 +5,21 @@
 
 #include "./macros.h"
 
+void* fixed_buffer_node_memory(fixed_buffer_node_t* node)
+{
+    return (void*) (node + 1);
+}
+
+void* fixed_buffer_node_end(fixed_buffer_node_t* node)
+{
+    return (void*) ((char*) (node + 1) + node->size);
+}
+
+fixed_buffer_node_t* fixed_buffer_node_first(fixed_buffer_allocator_t* allocator)
+{
+    return ((fixed_buffer_node_t*) allocator->buffer);
+}
+
 fixed_buffer_node_t* fixed_buffer_node_next(fixed_buffer_allocator_t* allocator, fixed_buffer_node_t* node)
 {
     fixed_buffer_node_t* next = (fixed_buffer_node_t*) fixed_buffer_node_end(node);
@@ -44,7 +59,7 @@ fixed_buffer_node_t* fixed_buffer_node_find(fixed_buffer_allocator_t* allocator,
  * @param size A size
  * @return The memory owned by the reserved node.
  */
-static void* node_reserve(fixed_buffer_allocator_t* allocator, fixed_buffer_node_t* node, size_t size)
+static void* fixed_buffer_node_reserve(fixed_buffer_allocator_t* allocator, fixed_buffer_node_t* node, size_t size)
 {
     UNUSED(allocator);
 
@@ -81,7 +96,7 @@ static void* node_reserve(fixed_buffer_allocator_t* allocator, fixed_buffer_node
  * @param allocator A fixed buffer allocator
  * @param node A node to release
  */
-static void node_release(fixed_buffer_allocator_t* allocator, fixed_buffer_node_t* node)
+static void fixed_buffer_node_release(fixed_buffer_allocator_t* allocator, fixed_buffer_node_t* node)
 {
     assert(node != NULL);
     assert(!node->is_hole);
@@ -149,7 +164,7 @@ static void* first_fit_reallocate(allocator_t* _allocator, void* memory, size_t 
         }
 
         // We found a node, so we allocate a size out of it.
-        return node_reserve(allocator, node, size);
+        return fixed_buffer_node_reserve(allocator, node, size);
     }
     else if (size == 0)
     {
@@ -160,7 +175,7 @@ static void* first_fit_reallocate(allocator_t* _allocator, void* memory, size_t 
             return NULL;
         }
 
-        node_release(allocator, node);
+        fixed_buffer_node_release(allocator, node);
 
         return NULL;
     }
@@ -185,7 +200,7 @@ static void* first_fit_reallocate(allocator_t* _allocator, void* memory, size_t 
 }
 
 static fixed_buffer_strategy_t first_fit_strategy_state = {
-    .allocator = {false, first_fit_reallocate},
+    .allocator = { first_fit_reallocate },
 };
 
 fixed_buffer_strategy_t* FBS_FIRST_FIT = &first_fit_strategy_state;

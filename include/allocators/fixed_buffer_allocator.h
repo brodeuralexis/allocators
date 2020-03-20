@@ -42,30 +42,21 @@ typedef struct fixed_buffer_node {
  * @param node A node
  * @return A pointer
  */
-static inline void* fixed_buffer_node_memory(fixed_buffer_node_t* node)
-{
-    return (void*) (node + 1);
-}
+void* fixed_buffer_node_memory(fixed_buffer_node_t* node);
 
 /**
  * Returns a pointer to the end of this node and its associated memory.
  * @param node A node
  * @return A pointer
  */
-static inline void* fixed_buffer_node_end(fixed_buffer_node_t* node)
-{
-    return (void*) ((char*) (node + 1) + node->size);
-}
+void* fixed_buffer_node_end(fixed_buffer_node_t* node);
 
 /**
  * Returns the first node from an allocator
  * @param allocator A fixed buffer allocator
  * @return A node
  */
-static inline fixed_buffer_node_t* fixed_buffer_node_first(fixed_buffer_allocator_t* allocator)
-{
-    return ((fixed_buffer_node_t*) allocator->buffer);
-}
+fixed_buffer_node_t* fixed_buffer_node_first(fixed_buffer_allocator_t* allocator);
 
 /**
  * Returns the node following another node in the list of nodes associated with an allocator.

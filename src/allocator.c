@@ -2,15 +2,15 @@
 
 void* allocate(allocator_t* allocator, size_t size)
 {
-    return allocator->__reallocate_fn(allocator, NULL, size);
+    return allocator->reallocate_fn(allocator, NULL, size);
 }
 
 void deallocate(allocator_t* allocator, void* memory)
 {
-    allocator->__reallocate_fn(allocator, memory, 0);
+    allocator->reallocate_fn(allocator, memory, 0);
 }
 
 void* reallocate(allocator_t* allocator, void* memory, size_t size)
 {
-    return allocator->__reallocate_fn(allocator, memory, size);
+    return allocator->reallocate_fn(allocator, memory, size);
 }

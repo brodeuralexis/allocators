@@ -10,8 +10,7 @@
  * All fields of an allocator are considered private.
  */
 typedef struct allocator {
-    bool __synchronized;
-    void* (*__reallocate_fn)(struct allocator* allocator, void* memory, size_t size);
+    void* (*reallocate_fn)(struct allocator* allocator, void* memory, size_t size);
 } allocator_t;
 
 /**

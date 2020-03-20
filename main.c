@@ -1,6 +1,3 @@
-#include <stdio.h>
-#include <string.h>
-
 #include "libmem.h"
 
 char buffer[1000];
@@ -16,7 +13,4 @@ int main()
 
     affiche_etat_memoire();
     affiche_parametre_memoire(250);
-
-//    fixed_buffer_allocator_debug(&fba, stderr);
-//    fprintf(stderr, "a1 = %zu\n", fixed_buffer_allocator_debug_memory(&fba, a1));
 }

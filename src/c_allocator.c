@@ -27,5 +27,5 @@ static void* c_allocator_reallocate_callback(allocator_t* allocator, void* memor
     }
 }
 
-static allocator_t c_allocator_state = { true, c_allocator_reallocate_callback };
+static allocator_t c_allocator_state = { c_allocator_reallocate_callback };
 allocator_t* c_allocator = &c_allocator_state;
