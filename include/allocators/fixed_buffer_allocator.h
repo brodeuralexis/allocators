@@ -11,14 +11,6 @@ extern fixed_buffer_strategy_t* FBS_BEST_FIT;
 extern fixed_buffer_strategy_t* FBS_WORST_FIT;
 extern fixed_buffer_strategy_t* FBS_NEXT_FIT;
 
-typedef struct {
-    allocator_t allocator;
-    void* buffer;
-    size_t size;
-} fixed_buffer_allocator_t;
-
-fixed_buffer_allocator_t fixed_buffer_allocator_init(fixed_buffer_strategy_t* strategy, void* buffer, size_t size);
-
 /**
  * A node in the allocation list of a fixed buffer allocator.
  */
@@ -36,6 +28,15 @@ typedef struct fixed_buffer_node {
      */
     struct fixed_buffer_node* previous;
 } fixed_buffer_node_t;
+
+typedef struct {
+    allocator_t allocator;
+    void* buffer;
+    size_t size;
+    fixed_buffer_node_t* last_node_reserved;
+} fixed_buffer_allocator_t;
+
+fixed_buffer_allocator_t fixed_buffer_allocator_init(fixed_buffer_strategy_t* strategy, void* buffer, size_t size);
 
 /**
  * Returns a pointer to the memory associated with this node.

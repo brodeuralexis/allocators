@@ -87,6 +87,7 @@ static void* fixed_buffer_node_reserve(fixed_buffer_allocator_t* allocator, fixe
     }
 
     node->is_hole = false;
+    allocator->last_node_reserved = node;
 
     return fixed_buffer_node_memory(node);
 }
