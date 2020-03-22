@@ -305,6 +305,184 @@ static fixed_buffer_strategy_t best_fit_strategy_state = {
 
 fixed_buffer_strategy_t* FBS_BEST_FIT = &best_fit_strategy_state;
 
+static void* worst_fit_reallocate(allocator_t* _allocator, void* memory, size_t size)
+{
+    fixed_buffer_allocator_t* allocator = FIELD_PARENT_PTR(fixed_buffer_allocator_t, allocator, _allocator);
+
+    if (memory == NULL && size == 0)
+    {
+        return NULL;
+    }
+    // No memory, but a size given, do memory allocation.
+    else if (memory == NULL)
+    {
+        fixed_buffer_node_t* worst_fit = NULL;
+        fixed_buffer_node_t* node = fixed_buffer_node_first(allocator);
+
+        while (node)
+        {
+            // We have a hole with enough bytes available.
+            if (node->is_hole && node->size >= size && (worst_fit == NULL || node->size > worst_fit->size))
+            {
+                worst_fit = node;
+            }
+
+            node = fixed_buffer_node_next(allocator, node);
+        }
+
+        // `node_next` returns NULL when traversal of the list finishes.
+        // This check indicates that we have not found a suitable block of memory to allocate.
+        if (worst_fit == NULL)
+        {
+            return NULL;
+        }
+
+        // We found a node, so we allocate a size out of it.
+        return fixed_buffer_node_reserve(allocator, worst_fit, size);
+    }
+    // Memory is not null, do a free.
+    else if (size == 0)
+    {
+        fixed_buffer_node_t* node = fixed_buffer_node_find(allocator, memory);
+
+        if (node == NULL)
+        {
+            return NULL;
+        }
+
+        fixed_buffer_node_release(allocator, node);
+
+        return NULL;
+    }
+    // We have a pointer to memory, and a size, do a resize.
+    else
+    {
+        fixed_buffer_node_t* node = fixed_buffer_node_find(allocator, memory);
+
+        if (node == NULL)
+        {
+            return NULL;
+        }
+
+        if (size <= node->size)
+        {
+            return memory;
+        }
+
+        void* new_memory = worst_fit_reallocate(_allocator, NULL, size);
+
+        if (new_memory == NULL)
+        {
+            return NULL;
+        }
+
+        memcpy(new_memory, memory, node->size);
+        fixed_buffer_node_release(allocator, node);
+
+        return new_memory;
+    }
+}
+
+static fixed_buffer_strategy_t worst_fit_strategy_state = {
+    .allocator = { worst_fit_reallocate },
+};
+
+fixed_buffer_strategy_t* FBS_WORST_FIT = &worst_fit_strategy_state;
+
+static void* next_fit_reallocate(allocator_t* _allocator, void* memory, size_t size)
+{
+    fixed_buffer_allocator_t* allocator = FIELD_PARENT_PTR(fixed_buffer_allocator_t, allocator, _allocator);
+
+    if (memory == NULL && size == 0)
+    {
+        return NULL;
+    }
+    // No memory, but a size given, do memory allocation.
+    else if (memory == NULL)
+    {
+        fixed_buffer_node_t* node = allocator->last_node_reserved;
+
+        // We take the next node after previous allocation
+        if (node != NULL)
+        {
+            node = fixed_buffer_node_next(allocator, node);
+        }
+
+        while (node != allocator->last_node_reserved)
+        {
+            // We have a hole with enough bytes available.
+            if (node->is_hole && node->size >= size)
+            {
+                break;
+            }
+
+            node = fixed_buffer_node_next(allocator, node);
+
+            if (node == NULL)
+            {
+                node = fixed_buffer_node_first(allocator);
+            }
+        }
+
+        // `node_next` returns NULL when traversal of the list finishes.
+        // This check indicates that we have not found a suitable block of memory to allocate.
+        if (node == NULL)
+        {
+            return NULL;
+        }
+
+        // We found a node, so we allocate a size out of it.
+        return fixed_buffer_node_reserve(allocator, node, size);
+    }
+    // Memory is not null, do a free.
+    else if (size == 0)
+    {
+        fixed_buffer_node_t* node = fixed_buffer_node_find(allocator, memory);
+
+        if (node == NULL)
+        {
+            return NULL;
+        }
+
+        fixed_buffer_node_release(allocator, node);
+
+        return NULL;
+    }
+    // We have a pointer to memory, and a size, do a resize.
+    else
+    {
+        fixed_buffer_node_t* node = fixed_buffer_node_find(allocator, memory);
+
+        if (node == NULL)
+        {
+            return NULL;
+        }
+
+        if (size <= node->size)
+        {
+            return memory;
+        }
+
+        void* new_memory = first_fit_reallocate(_allocator, NULL, size);
+
+        if (new_memory == NULL)
+        {
+            return NULL;
+        }
+
+        memcpy(new_memory, memory, node->size);
+        fixed_buffer_node_release(allocator, node);
+
+        return new_memory;
+    }
+}
+
+static fixed_buffer_strategy_t next_fit_strategy_state = {
+    .allocator = { next_fit_reallocate },
+};
+
+fixed_buffer_strategy_t* FBS_NEXT_FIT = &next_fit_strategy_state;
+
 fixed_buffer_allocator_t fixed_buffer_allocator_init(fixed_buffer_strategy_t* strategy, void* buffer, size_t size)
 {
     if (strategy == NULL)
@@ -325,25 +503,25 @@ fixed_buffer_allocator_t fixed_buffer_allocator_init(fixed_buffer_strategy_t* st
     return allocator;
 }
 
+void fixed_buffer_allocator_set_strategy(fixed_buffer_allocator_t* allocator, fixed_buffer_strategy_t* strategy)
+{
+    allocator->allocator = strategy->allocator;
+}
+
 void fixed_buffer_allocator_debug(fixed_buffer_allocator_t* allocator, FILE* file)
 {
+    int i = 0;
     fixed_buffer_node_t* node = fixed_buffer_node_first(allocator);
-
-    fprintf(file, "[ (sizeof(node) == %zu)\n", sizeof(fixed_buffer_node_t));
 
     while (node != NULL)
     {
-        fprintf(file, "\t%s @ %zu {\n", node->is_hole ? "hole" : "used", (size_t) (((char*) node) - ((char*) allocator->buffer)));
-
-        fprintf(file, "\t\tsize   = %zu\n", node->size);
-        fprintf(file, "\t\tmemory = @ %zu\n", (size_t) (((char*) fixed_buffer_node_memory(node)) - ((char*) allocator->buffer)));
-
-        fprintf(file, "\t}\n");
+        fprintf(file, "[BLOCK %d] - %s (%zu bytes)\n", i, node->is_hole ? "free" : "used", 24 + node->size);
+        fprintf(file, "\theader (%d bytes) \t@ %zu\n", 24, (size_t)(((char*)node) - ((char*)allocator->buffer)));
+        fprintf(file, "\tmemory (%zu bytes) \t@ %zu\n\n", node->size, (size_t)(((char*)fixed_buffer_node_memory(node)) - ((char*)allocator->buffer)));
 
         node = fixed_buffer_node_next(allocator, node);
+        ++i;
     }
-
-    fprintf(file, "]\n");
 }
 
 size_t fixed_buffer_allocator_debug_memory(fixed_buffer_allocator_t* allocator, void* memory)

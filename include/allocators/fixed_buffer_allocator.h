@@ -38,6 +38,8 @@ typedef struct {
 
 fixed_buffer_allocator_t fixed_buffer_allocator_init(fixed_buffer_strategy_t* strategy, void* buffer, size_t size);
 
+void fixed_buffer_allocator_set_strategy(fixed_buffer_allocator_t* allocator, fixed_buffer_strategy_t* strategy);
+
 /**
  * Returns a pointer to the memory associated with this node.
  * @param node A node
