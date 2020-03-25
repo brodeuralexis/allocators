@@ -16,9 +16,15 @@ enum mem_strategy {
 
 void initmem(enum mem_strategy strategy, void* buffer, size_t size);
 
+void setstrategy(enum mem_strategy strategy);
+
 void* alloumem(size_t size);
 
 void liberemem(void* mem);
+
+void liberebloc(size_t block);
+
+void clearmem();
 
 size_t nbloclibre();
 

@@ -1,16 +1,12 @@
 #include "libmem.h"
 
-#include "allocators/fixed_buffer_allocator.h"
-
 #include <stdlib.h>
 #include <errno.h>
 #include <limits.h>
 
 char buffer[4096];
 int userChoice;
-
-fixed_buffer_strategy_t* currentStrategy;
-fixed_buffer_strategy_t* strategies[4];
+enum mem_strategy currentStrategy;
 
 /* Utility function found on StackOverflow by "user2371524" (Felix Palmen, felix@palmen-it.de) to read a number*/
 // return success as boolean (0, 1), on success write result through *number:
@@ -60,19 +56,19 @@ int safeInput(int* number)
 void printMainMenu()
 {
     printf("Current allocating strategy : ");
-    if (currentStrategy == strategies[0])
+    if (currentStrategy == ms_first_fit)
     {
         printf("FIRST FIT\n");
     }
-    else if (currentStrategy == strategies[1])
+    else if (currentStrategy == ms_best_fit)
     {
         printf("BEST FIT\n");
     }
-    else if (currentStrategy == strategies[2])
+    else if (currentStrategy == ms_worst_fit)
     {
         printf("WORST FIT\n");
     }
-    else if (currentStrategy == strategies[3])
+    else if (currentStrategy == ms_next_fit)
     {
         printf("NEXT FIT\n");
     }
@@ -109,56 +105,30 @@ void printChangingStrategyMenu()
 
 void changeStrategy(int choice)
 {
-    if (choice >= 1 && choice <= 4)
+    if (choice == 1)
     {
-        currentStrategy = strategies[choice - 1];
+        currentStrategy = ms_first_fit;
     }
-}
-
-fixed_buffer_node_t* getNodeAtIndex(fixed_buffer_allocator_t* fba, int block)
-{
-    int i = 0;
-    fixed_buffer_node_t* node = fixed_buffer_node_first(fba);
-
-    while (node && i < block)
+    else if (choice == 2)
     {
-        node = fixed_buffer_node_next(fba, node);
-        ++i;
+        currentStrategy = ms_best_fit;
     }
-
-    if (node)
+    else if (choice == 3)
     {
-        return node;
+        currentStrategy = ms_worst_fit;
     }
-    else
+    else if (choice == 4)
     {
-        return NULL;
-    }
-}
-
-void clear(fixed_buffer_allocator_t* fba)
-{
-    fixed_buffer_node_t* node = fixed_buffer_node_first(fba);
-    while (node)
-    {
-        if (!node->is_hole)
-        {
-            deallocate(&fba->allocator, fixed_buffer_node_memory(node));
-        }
-        node = fixed_buffer_node_next(fba, node);
+        currentStrategy = ms_next_fit;
     }
 }
 
 int main()
 {
-    strategies[0] = FBS_FIRST_FIT;
-    strategies[1] = FBS_BEST_FIT;
-    strategies[2] = FBS_WORST_FIT;
-    strategies[3] = FBS_NEXT_FIT;
-    currentStrategy = FBS_FIRST_FIT;
+    currentStrategy = ms_first_fit;
     bool running = true;
 
-    fixed_buffer_allocator_t fba = fixed_buffer_allocator_init(currentStrategy, &buffer, sizeof(buffer));
+    initmem(currentStrategy, &buffer, sizeof(buffer));
 
     while (running)
     {
@@ -173,18 +143,18 @@ int main()
 
                 if (currentStrategy != NULL)
                 {
-                    fixed_buffer_allocator_set_strategy(&fba, currentStrategy);
+                    setstrategy(currentStrategy);
                 }
             } break;
 
             case 2:
             {
-                fixed_buffer_allocator_debug(&fba, stderr);
+                affiche_etat_memoire();
             } break;
 
             case 3:
             {
-                clear(&fba);
+                clearmem();
             } break;
 
             case 4:
@@ -193,7 +163,7 @@ int main()
                 printf("How many bytes? ");
                 if (safeInput(&bytes))
                 {
-                    allocate(&fba.allocator, bytes);
+                    alloumem(bytes);
                 }
             } break;
 
@@ -203,15 +173,7 @@ int main()
                 printf("Which memory block? ");
                 if (safeInput(&block))
                 {
-                    fixed_buffer_node_t* node = getNodeAtIndex(&fba, block);
-
-                    if (node != NULL)
-                    {
-                        if (!node->is_hole)
-                        {
-                            deallocate(&fba.allocator, fixed_buffer_node_memory(node));
-                        }
-                    }
+                    liberebloc(block);
                 }
             } break;
 

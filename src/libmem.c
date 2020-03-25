@@ -4,6 +4,27 @@
 
 fixed_buffer_allocator_t fba;
 
+static fixed_buffer_node_t* getNodeAtIndex(fixed_buffer_allocator_t* fba, size_t block)
+{
+    int i = 0;
+    fixed_buffer_node_t* node = fixed_buffer_node_first(fba);
+
+    while (node && i < block)
+    {
+        node = fixed_buffer_node_next(fba, node);
+        ++i;
+    }
+
+    if (node)
+    {
+        return node;
+    }
+    else
+    {
+        return NULL;
+    }
+}
+
 void initmem(enum mem_strategy strategy, void* buffer, size_t size)
 {
     switch (strategy)
@@ -15,15 +36,35 @@ void initmem(enum mem_strategy strategy, void* buffer, size_t size)
             fba = fixed_buffer_allocator_init(FBS_BEST_FIT, buffer, size);
             break;
         case ms_worst_fit:
-            fputs("unsupported strategy: ms_worst_fit\n", stderr);
-            exit(EXIT_FAILURE);
+            fba = fixed_buffer_allocator_init(FBS_WORST_FIT, buffer, size);
+            break;
         case ms_next_fit:
-            fputs("unsupported strategy: ms_next_fit\n", stderr);
-            exit(EXIT_FAILURE);
+            fba = fixed_buffer_allocator_init(FBS_NEXT_FIT, buffer, size);
+            break;
         default:
             fputs("unknown strategy\n", stderr);
             exit(EXIT_FAILURE);
     }
+}
+
+void setstrategy(enum mem_strategy strategy)
+{
+    switch (strategy)
+    {
+        case ms_first_fit:
+            fixed_buffer_allocator_set_strategy(&fba, FBS_FIRST_FIT);
+            break;
+        case ms_best_fit:
+            fixed_buffer_allocator_set_strategy(&fba, FBS_BEST_FIT);
+            break;
+        case ms_worst_fit:
+            fixed_buffer_allocator_set_strategy(&fba, FBS_WORST_FIT);
+            break;
+        case ms_next_fit:
+            fixed_buffer_allocator_set_strategy(&fba, FBS_NEXT_FIT);
+            break;
+    }
+    
 }
 
 void* alloumem(size_t size)
@@ -34,6 +75,32 @@ void* alloumem(size_t size)
 void liberemem(void* mem)
 {
     deallocate(&fba.allocator, mem);
+}
+
+void liberebloc(size_t block)
+{
+    fixed_buffer_node_t* node = getNodeAtIndex(&fba, block);
+
+    if (node != NULL)
+    {
+        if (!node->is_hole)
+        {
+            deallocate(&fba.allocator, fixed_buffer_node_memory(node));
+        }
+    }
+}
+
+void clearmem()
+{
+    fixed_buffer_node_t* node = fixed_buffer_node_first(&fba);
+    while (node)
+    {
+        if (!node->is_hole)
+        {
+            deallocate(&fba.allocator, fixed_buffer_node_memory(node));
+        }
+        node = fixed_buffer_node_next(&fba, node);
+    }
 }
 
 size_t nbloclibre()

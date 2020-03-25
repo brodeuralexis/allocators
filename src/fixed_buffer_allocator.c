@@ -408,6 +408,11 @@ static void* next_fit_reallocate(allocator_t* _allocator, void* memory, size_t s
             node = fixed_buffer_node_next(allocator, node);
         }
 
+        if (allocator->last_node_reserved == NULL)
+        {
+            allocator->last_node_reserved = fixed_buffer_node_first(allocator);
+        }
+
         while (node != allocator->last_node_reserved)
         {
             // We have a hole with enough bytes available.
